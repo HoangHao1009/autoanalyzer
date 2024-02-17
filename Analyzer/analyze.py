@@ -571,7 +571,7 @@ class CustomerLTVPredictor:
                 }
             scores.append(s)
 
-        self.model_params = pd.DataFrame(scores, columns = ['model', 'best_score', 'best_params', 'best_estimator'])
+        self.predictor_scores = pd.DataFrame(scores, columns = ['model', 'best_score', 'best_params', 'best_estimator'])
         self.best_estimator = self.model_params[self.model_params['best_score'] == self.model_params['best_score'].max()]['best_estimator'].values[0]
         self.pred_pipeline = Pipeline(steps = [
             ('preprocess', self.preprocessor),
@@ -579,7 +579,6 @@ class CustomerLTVPredictor:
         ])
         
     def run_best_predictor(self, analyzer = RFMSegmentaion):
-        if analyzer.mode != 'rfm_cluster':
-            print('You must run rfm cluster before using CustomerLTVPredictor')
-        pred =  self.pred_pipeline.predict(analyzer.df)
+        rfm = analyzer.rfm.copy()
+        pred =  self.pred_pipeline.predict(rfm)
         return pred
