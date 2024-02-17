@@ -6,5 +6,5 @@ setup(
   author = 'Ha Hoang Hao',
   packages = ['Analyzer'],
   description = 'automatically analyze marketing metrics',
-  install_requires = ['pandas', 'scikit-learn]
+  install_requires = ['pandas', 'scikit-learn']
 )
