@@ -491,7 +491,7 @@ class CustomerLTVPredictor:
             kmeans = KMeans(n_init = 10, n_clusters = k, max_iter = 1000)
             kmeans.fit(self.df[['Total Revenue']])
             sse[k] = kmeans.inertia_
-        px.line(x = sse.keys(), y = sse.values())
+        return px.line(x = sse.keys(), y = sse.values())
 
     def chose_best_predictor(self, revenue_clusters = 3, 
                              remove_outlier_quantile = 1,
