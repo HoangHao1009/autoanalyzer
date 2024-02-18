@@ -1,5 +1,5 @@
 import pandas as pd
-from autoanalyzer.Analyzer import Column
+from Analyzer import Column
 import plotly.express as px
 
 
