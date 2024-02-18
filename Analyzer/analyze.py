@@ -1,5 +1,5 @@
 import pandas as pd
-from Analyzer import Column
+from autoanalyzer.Analyzer import Column
 import plotly.express as px
 
 
@@ -326,10 +326,6 @@ class Cohort:
 class RFMSegmentaion:
     def __init__(self, customer = Column.mainColunm, sale = Column.mainColunm, date = Column.Date,
                  r_clusters = 4, f_clusters = 4, m_clusters = 4):
-        if not customer.type == 'customer':
-            raise TypeError('customer requires customer columns')
-        if not sale.type == 'sale':
-            raise TypeError('sale requires sales columns')
         self.input = _merge([customer, date, sale])
         self.get_data(r_clusters, f_clusters, m_clusters)
         self.get_chart()
@@ -348,6 +344,7 @@ class RFMSegmentaion:
 
     def get_data(self, r_clusters, f_clusters, m_clusters):
         def get_rfm(data):
+            n_ym = data['y_m'].nunique()
             recency = data.groupby(['customer'])['date'].max().reset_index()
             recency.columns = ['customer', 'MaxPurchaseDate']
             recency['Recency'] = (recency['MaxPurchaseDate'].max() - recency['MaxPurchaseDate']).dt.days
@@ -359,6 +356,7 @@ class RFMSegmentaion:
             monetary.columns = ['customer', 'Monetary']
             data = recency.merge(frequency, how = 'left', on = 'customer')\
                         .merge(monetary, how = 'left', on = 'customer')
+            data[['Recency', 'Frequency', 'Monetary']] = data[['Recency', 'Frequency', 'Monetary']].map(lambda x: x/ n_ym)
             return data
         
         def get_segment(data, r_clusters, f_clusters, m_clusters):
@@ -419,11 +417,15 @@ class RFMSegmentaion:
             title = 'Frequency - Monetary Relationship'
         )
 
-
-    
-
-
-_model_params = {
+class CustomerLTVPredictor:
+    def __init__(self, analyzer = RFMSegmentaion):
+        rfm = analyzer.segment.copy()
+        customer_segment = analyzer.input[['customer', 'customer_segment']].drop_duplicates()
+        basic_df = analyzer.input.groupby('customer')['sale'].sum().reset_index()
+        basic_df.columns = ['customer', 'Total Revenue']
+        self.df = basic_df.merge(rfm, how = 'left', on = 'customer')\
+                        .merge(customer_segment, how = 'left', on = 'customer')
+        self._model_params = {
     'logistic_regression': {
         'model': LogisticRegression(),
         'params': {
@@ -477,14 +479,6 @@ _model_params = {
         }
     }
 }
-
-class CustomerLTVPredictor:
-    def __init__(self, analyzer = RFMSegmentaion):
-        rfm = analyzer.rfm.copy()
-        basic_df = analyzer.input.groupby('customer')['sale'].sum().reset_index()
-        basic_df.columns = ['customer', 'Total Revenue']
-        self.df = rfm.merge(basic_df, how = 'left', on = 'customer')
-
     def cluster_hint(self):
         sse = {}
         for k in range(1, 10):
@@ -508,11 +502,11 @@ class CustomerLTVPredictor:
         self.ltv_cluster_info = mean_revenue_ltv.merge(count_ltv_cluster, how = 'left', on = 'LTV Cluster')
         self.ltv_cluster_info = self.ltv_cluster_info.rename(columns = {'Total Revenue': 'Life Time Value (Revenue)',
                                                                         'count': 'Customer Count'})
-        model_params = _model_params
+        model_params = self._model_params
 
         if only_modern_model == True:
             modern_model = ['random_forest', 'xgb', 'mlp']
-            model_params = {key: _model_params[key] for key in modern_model}
+            model_params = {key: self._model_params[key] for key in modern_model}
         
         X = self.df.drop(['LTV Cluster', 'Total Revenue'], axis = 1)
         y = self.df['LTV Cluster']
@@ -579,6 +573,9 @@ class CustomerLTVPredictor:
         ])
         
     def run_best_predictor(self, analyzer = RFMSegmentaion):
-        rfm = analyzer.rfm.copy()
-        pred =  self.pred_pipeline.predict(rfm)
-        return pred
+        rfm = analyzer.segment
+        customer_segment = analyzer.input[['customer', 'customer_segment']].drop_duplicates()
+        df = pd.merge(rfm, customer_segment, how = 'left', on = 'customer')
+
+        pred = self.pred_pipeline.predict(df)
+        return pd.concat([df['customer'], pd.Series(pred, name = 'Life Time Value Predicted')], axis = 1)
