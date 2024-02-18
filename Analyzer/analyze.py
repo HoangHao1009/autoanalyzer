@@ -572,7 +572,7 @@ class CustomerLTVPredictor:
             scores.append(s)
 
         self.predictor_scores = pd.DataFrame(scores, columns = ['model', 'best_score', 'best_params', 'best_estimator'])
-        self.best_estimator = self.model_params[self.model_params['best_score'] == self.model_params['best_score'].max()]['best_estimator'].values[0]
+        self.best_estimator = self.predictor_scores[self.predictor_scores['best_score'] == self.predictor_scores['best_score'].max()]['best_estimator'].values[0]
         self.pred_pipeline = Pipeline(steps = [
             ('preprocess', self.preprocessor),
             ('model', self.best_estimator)
