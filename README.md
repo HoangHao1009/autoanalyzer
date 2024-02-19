@@ -1,6 +1,7 @@
 # autoanalyzer
 Auto analyze - visualize marketing data
-You can use it by python or use web interface https://mktanalyze.streamlit.app/
+
+You can use it by python or use web interface: https://mktanalyze.streamlit.app/
 
 # Table of contents
 - Library installation
